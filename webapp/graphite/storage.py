@@ -127,9 +127,14 @@ class Store:
           distance = query.interval.start - latest.end
           return distance if distance >= 0 else float('inf')
 
-        best_candidate = min(leaf_nodes, key=distance_to_requested_interval)
-        if distance_to_requested_interval(best_candidate) <= settings.FIND_TOLERANCE:
-          minimal_node_set.add(best_candidate)
+        # we've found no data that matches -- if theres only one possible node to search,
+        # just default to using that
+        if len(leaf_nodes) == 1:
+          minimal_node_set.add(leaf_nodes[0])
+        else:
+          best_candidate = min(leaf_nodes, key=distance_to_requested_interval)
+          if distance_to_requested_interval(best_candidate) <= settings.FIND_TOLERANCE:
+            minimal_node_set.add(best_candidate)
 
       if len(minimal_node_set) == 1:
         yield minimal_node_set.pop()
