@@ -1548,7 +1548,8 @@ class LineGraph(Graph):
 
 class PieGraph(Graph):
   customizable = Graph.customizable + \
-                 ('title','valueLabels','valueLabelsMin','hideLegend','pieLabels','areaAlpha','valueLabelsColor')
+                 ('title','valueLabels','valueLabelsMin','hideLegend','pieLabels','areaAlpha','valueLabelsColor', \
+                  'unitSystem')
   validValueLabels = ('none','number','percent')
 
   def drawGraph(self,**params):
@@ -1563,6 +1564,13 @@ class PieGraph(Graph):
         pass
     else:
       self.alpha = 1.0
+
+    if 'unitSystem' not in params:
+      self.unitSystem = 'none'
+    else:
+      self.unitSystem = str(params['unitSystem']).lower()
+      if params['unitSystem'] not in UnitSystems.keys():
+        self.unitSystem = 'none'
 
     self.slices = []
     for name,value in self.data:
@@ -1625,11 +1633,21 @@ class PieGraph(Graph):
         if (slice['percent'] * 100.0) < self.valueLabelsMin: continue
         label = "%%%.2f" % (slice['percent'] * 100.0)
       elif self.valueLabels == 'number':
+        # ensure we test the minimum value before we format the units, so we
+        # dont mixup 1 byte vs 1gb etc
         if slice['value'] < self.valueLabelsMin: continue
-        if slice['value'] < 10 and slice['value'] != int(slice['value']):
-          label = "%.2f" % slice['value']
+
+        if self.unitSystem == 'none':
+          slicevalue = slice['value']
+          slicesuffix = ''
         else:
-          label = str(int(slice['value']))
+          slicevalue, slicesuffix = format_units(slice['value'], None, self.unitSystem)
+
+        if slicevalue < 10 and slicevalue != int(slicevalue):
+            label = "%.2f%s" % (slicevalue, slicesuffix)
+        else:
+            label = "%d%s" % (int(slicevalue), slicesuffix)
+
       extents = self.getExtents(label)
       theta = slice['midAngle']
       x = self.x0 + (self.radius / 2.0 * math.cos(theta))
